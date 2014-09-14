@@ -145,6 +145,8 @@ def generateGLUT(A,shades):
 heightMap = numpy.load('fromZero.npy')
 sample_datetime = datetime.datetime(2014,3,8,10,0)
 sunV = azalt2normalVector(*datetime2azalt(sample_datetime))
+# Scale the sun vector by the hourly irradiance
+# sunV = irradianceScaled(sunV,sample_datetime)
 
 makeNormalVectorArray(heightMap)
 normalVectorMap = numpy.load('normalVectorArray.npy')

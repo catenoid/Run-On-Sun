@@ -110,7 +110,7 @@ int glutMain(int argc, char **argv){
   glutInitWindowPosition(100,100);
   glutInitWindowSize(320,320);
   glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
-  glutCreateWindow("Test Window");
+  glutCreateWindow("Solar Irradiance Simulation");
   
   // Register callbacks
   // called when the window changes size with the new window dim as params
