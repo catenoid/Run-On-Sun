@@ -266,8 +266,8 @@ def generateGL(A,shades):
   # restricted domain. For the full extent, replace 10 with m,n
   m, n = A.shape
   string = ''
-  for i in xrange(50):
-    for j in xrange(50):
+  for i in xrange(70):
+    for j in xrange(70):
       string = string + triangleOctuple(i,j,A,shades) # replace with tripair
   return string
 
