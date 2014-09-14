@@ -95,7 +95,6 @@ def shaderArray(A,sunV):
   arrayFile = open('scalarArray.npy', 'w')
   numpy.save(arrayFile,scalarArray)
 
-
 def updateShaderArray(A,scalarArray,sunV):
   # dot each normal vector with sun vector and accumulate
   #m, n = A.shape[0],A.shape[1]
@@ -103,21 +102,20 @@ def updateShaderArray(A,scalarArray,sunV):
     for j in xrange(100):
       for k in (0,1):
           scalarArray[i,j,k] += max(0,dotProduct(sunV,A[i,j,k]))
+  return scalarArray
 
 def normaliseArray(A):
   minimum = A.min()
   maximum = A.max()
-  return (A - maximum)/(maximum - minimum)
+  return (A - minimum)/(maximum - minimum)
 
-#scalarArray = numpy.zeros((100,100,2))
-#for hour in xrange(24):
-#  now = datetime.datetime(2014,3,8,hour,0)
-#  unscaledSun = azalt2normalVector(*datetime2azalt(now))
-#  # Scale the sun vector by the hourly irradiance
-#  sun = irradianceScaled(unscaledSun,now)
-#  updateShaderArray(heightMap,scalarArray,sun)
-#arrayFile = open('scalarArray.npy', 'w')
-#numpy.save(arrayFile,scalarArray)
+def hourAverage(heightMap,scalarArray):
+  for hour in xrange(24):
+    now = datetime.datetime(2014,3,8,hour,0)
+    unscaledSun = azalt2normalVector(*datetime2azalt(now))
+    sun = irradianceScaled(unscaledSun,now)
+    scalarArray = updateShaderArray(heightMap,scalarArray,sun)
+  return normaliseArray(scalarArray)
 
 # Under construction: New heatmap
 #norm = matplotlib.colors.Normalize(vmin=0, vmax=1, clip=False)
@@ -170,15 +168,22 @@ def generateGLUT(A,shades):
   outfile.close()
 
 heightMap = numpy.load('fromZero.npy')
-sample_datetime = datetime.datetime(2014,3,8,10,0)
-unscaledSunV = azalt2normalVector(*datetime2azalt(sample_datetime))
+#sample_datetime = datetime.datetime(2014,3,8,10,0)
+#unscaledSunV = azalt2normalVector(*datetime2azalt(sample_datetime))
 # Scale the sun vector by the hourly irradiance
-sunV = irradianceScaled(unscaledSunV,sample_datetime)
+#sunV = irradianceScaled(unscaledSunV,sample_datetime)
 
 #makeNormalVectorArray(heightMap)
 normalVectorMap = numpy.load('normalVectorArray.npy')
 
-shaderArray(normalVectorMap,sunV)
-shaderMap = numpy.load('scalarArray.npy')
+emptyArray = numpy.zeros((100,100,2))
+print emptyArray.shape
+hourAvArray = hourAverage(normalVectorMap,emptyArray)
+print hourAvArray[5,5,0]
+hourAvFile = open('hourAverageArray.npy', 'w')
+numpy.save(hourAvFile,hourAvArray)
 
-generateGLUT(heightMap,shaderMap)
+#shaderArray(normalVectorMap,sunV)
+#shaderMap = numpy.load('hourAverageArray.npy')
+
+generateGLUT(heightMap,hourAvArray)
