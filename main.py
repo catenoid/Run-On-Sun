@@ -1,6 +1,12 @@
 # main.py
 
-import numpy, ephem, datetime
+import numpy
+import ephem
+import datetime
+
+#import matplotlib.cm
+#import matplotlib.colors
+#CMAP = 'nipy_spectral'
 
 def datetime2azalt(datetime):
   # At datetime, what is the angular location
@@ -14,9 +20,9 @@ def datetime2azalt(datetime):
 
 def azalt2normalVector(az,alt):
   # turn the two angles into a cartesian vector
-  x = numpy.cos(alt)*numpy.sin(az)
-  y = numpy.cos(alt)*numpy.cos(az)
-  z = numpy.sin(alt)
+  x =  numpy.cos(alt)*numpy.sin(az)
+  y =  numpy.sin(alt)
+  z = -numpy.cos(alt)*numpy.cos(az)
   return numpy.array([x,y,z])
 
 def makeArray(filename):
@@ -45,8 +51,8 @@ def crossProduct(i,j,A):
   # by referencing the array and dividing by vector length
   # i,j indexes the upper left corner of the bounding square
   # 2 by 3 array
-  one = numpy.array([A[i+1,j]-A[i,j],A[i,j+1]-A[i,j],-1])
-  two = numpy.array([A[i+1,j+1]-A[i,j+1],A[i+1,j+1]-A[i+1,j],-1])
+  one = numpy.array([A[i+1,j]-A[i,j],1,A[i,j]-A[i,j+1]])
+  two = numpy.array([A[i,j+1]-A[i+1,j+1],1,A[i+1,j]-A[i+1,j+1]])
   normalOne = normalised(one)
   normalTwo = normalised(two)
   return (normalOne, normalTwo)
@@ -82,24 +88,27 @@ def shaderArray(A,sunV):
   for i in xrange(100):
     for j in xrange(100):
       for k in (0,1):
-          scalarArray[i,j,k] = dotProduct(sunV,A[i,j,k])
+          scalarArray[i,j,k] = max(0,dotProduct(sunV,A[i,j,k]))
   arrayFile = open('scalarArray.npy', 'w')
   numpy.save(arrayFile,scalarArray)
 
+# Under construction: New heatmap
+#norm = matplotlib.colors.Normalize(vmin=0, vmax=1, clip=False)
+#smap = matplotlib.cm.ScalarMappable(norm, CMAP)
+#def matplotlibRGB(value):
+#  r, g, b, alpha = smap.to_rgba(value, alpha=None, bytes=True)
+#  return '%(red)s,%(green)s,%(blue)s' % {'red':r,'green':g,'blue':b} 
+
 def RGB(value):
-  # From a normalised shade zero to one, convert to RGB
-  # based on a typical 'heat map' gradient
-  # return a string with commas in the right places
-  # in this case, zero is blue (cold) and 1 is red (hot)
+  # From a normalised shade zero to one, convert to RGB with linear interpolation
+  # in this case, zero is blue (cold) and one is red (hot)
   b = max(0, (1 - 2*value))
   r = max(0, (2*value - 1))
   g = 1 - b - r
   return '%(red)s,%(green)s,%(blue)s' % {'red':r,'green':g,'blue':b}
 
 def trianglePair(i,j,A,shades):
-  # produces OpenGl code for two triangles
-  # for which the upper left corner of the bounding square
-  # is at coordinate (i,j)
+  # Upper left corner of the bounding square is at coordinate (i,j)
   # height array m by n (called A)
   # shades array m by n by 2
   OpenGLString = ('glBegin(GL_TRIANGLES);',
@@ -117,8 +126,8 @@ def trianglePair(i,j,A,shades):
   return "\n".join(OpenGLString)
 
 def generateGL(A,shades):
-  # go through each box in the grid, return a looooong string
-  # restricted domain, for the full extent, replace 10 with m,n
+  # Extend to each box in the grid
+  # restricted domain. For the full extent, replace 10 with m,n
   m, n = A.shape
   string = ''
   for i in xrange(100):
@@ -127,13 +136,12 @@ def generateGL(A,shades):
   return string
 
 def generateGLUT(A,shades):
-  # add everything else necessary for camera movement etc.
+  # Camera movement, ground etc.
   data = open('template.c', 'r').read() % {'triangulate':generateGL(A,shades)}
   outfile = open('current.c', 'w')
   outfile.write(data)
   outfile.close()
 
-#makeArray('testdata.txt')
 heightMap = numpy.load('fromZero.npy')
 sample_datetime = datetime.datetime(2014,3,8,10,0)
 sunV = azalt2normalVector(*datetime2azalt(sample_datetime))
