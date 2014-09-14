@@ -61,6 +61,18 @@ def crossProduct(i,j,A):
   normalTwo = normalised(two)
   return (normalOne, normalTwo)
 
+def smoothedCrossProduct(i,j,inter):
+  # Now makes 8 vectors
+  one = normalised(numpy.array([inter[1]-inter[0],1,inter[0]-inter[3]]))
+  two = normalised(numpy.array([inter[3]-inter[4],1,inter[1]-inter[4]]))
+  thr = normalised(numpy.array([inter[2]-inter[1],1,inter[1]-inter[4]]))
+  fou = normalised(numpy.array([inter[4]-inter[5],1,inter[2]-inter[5]]))
+  fiv = normalised(numpy.array([inter[4]-inter[3],1,inter[3]-inter[6]]))
+  six = normalised(numpy.array([inter[6]-inter[7],1,inter[4]-inter[7]]))
+  sev = normalised(numpy.array([inter[5]-inter[4],1,inter[4]-inter[7]]))
+  eig = normalised(numpy.array([inter[7]-inter[8],1,inter[5]-inter[8]]))
+  return (one,two,thr,fou,fiv,six,sev,eig)
+
 def normalised(vector):
   return vector / numpy.linalg.norm(vector)
 
@@ -78,6 +90,27 @@ def makeNormalVectorArray(A):
   arrayFile = open('normalVectorArray.npy', 'w')
   numpy.save(arrayFile,normalVectorArray)
 
+def makeSmoothedNormalVectorArray(A):
+  smoothedNormalVectorArray = numpy.zeros((100,100,4,2,3))
+  #m, n = A.shape
+  for i in xrange(100):
+    for j in xrange(100):
+      inter = [A[i,j],
+               0.5*(A[i+1,j]+A[i,j]),
+               A[i+1,j],
+               0.5*(A[i,j+1]+A[i,j]),
+               0.25*(A[i,j]+A[i+1,j]+A[i,j+1]+A[i+1,j+1]),
+               0.5*(A[i+1,j+1]+A[i+1,j]),
+               A[i,j+1],
+               0.5*(A[i,j+1]+A[i+1,j+1]),
+               A[i+1,j+1]]
+      for quad in xrange(4):
+        for k in (0,1):
+          for l in (0,1,2):
+            smoothedNormalVectorArray[i,j,quad,k,l] = smoothedCrossProduct(i,j,inter)[2*quad+k][l]
+  arrayFile = open('smoothedNormalVectorArray.npy', 'w')
+  numpy.save(arrayFile,smoothedNormalVectorArray)
+
 def dotProduct(one,two):
   # computes a dot product
   # in context, between a triangle's normal vector
@@ -94,6 +127,17 @@ def shaderArray(A,sunV):
           scalarArray[i,j,k] = max(0,dotProduct(sunV,A[i,j,k]))
   arrayFile = open('scalarArray.npy', 'w')
   numpy.save(arrayFile,scalarArray)
+
+def smoothedShaderArray(A,sunV):
+  smoothedScalarArray = numpy.zeros((100,100,4,2))
+  for i in xrange(100):
+    for j in xrange(100):
+      for quad in xrange(4):
+        for k in (0,1):
+          smoothedScalarArray[i,j,quad,k] = max(0,dotProduct(sunV,A[i,j,quad,k]))
+  arrayFile = open('smoothedScalarArray.npy', 'w')
+  numpy.save(arrayFile,smoothedScalarArray)
+  
 
 def updateShaderArray(A,scalarArray,sunV):
   # dot each normal vector with sun vector and accumulate
@@ -150,14 +194,81 @@ def trianglePair(i,j,A,shades):
                   'glEnd();') 
   return "\n".join(OpenGLString)
 
+def triangleOctuple(i,j,A,shades):
+  # Upper left corner of the bounding square is at coordinate (i,j)
+  # height array m by n (called A)
+  # shades array m by n by FOUR [subdivition] by 2
+  # interpolated: specifies points in 3 by 3 raster
+  inter = [A[i,j],
+           0.5*(A[i+1,j]+A[i,j]),
+           A[i+1,j],
+           0.5*(A[i,j+1]+A[i,j]),
+           0.25*(A[i,j]+A[i+1,j]+A[i,j+1]+A[i+1,j+1]),
+           0.5*(A[i+1,j+1]+A[i+1,j]),
+           A[i,j+1],
+           0.5*(A[i,j+1]+A[i+1,j+1]),
+           A[i+1,j+1]]
+  OpenGLString = ('glBegin(GL_TRIANGLES);',
+                  'glColor3f(%(RGB)s);' %{'RGB':RGB(shades[i,j,0,0])},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i,'y':j,'A':inter[0]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+0.5,'y':j,'A':inter[1]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i,'y':j+0.5,'A':inter[3]},
+                  'glEnd();',
+                  'glBegin(GL_TRIANGLES);',
+                  'glColor3f(%(RGB)s);' %{'RGB':RGB(shades[i,j,0,1])},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+0.5,'y':j,'A':inter[1]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+0.5,'y':j+0.5,'A':inter[4]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i,'y':j+0.5,'A':inter[3]},
+                  'glEnd();',
+
+                  'glBegin(GL_TRIANGLES);',
+                  'glColor3f(%(RGB)s);' %{'RGB':RGB(shades[i,j,1,0])},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+0.5,'y':j,'A':inter[1]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+1,'y':j,'A':inter[2]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+0.5,'y':j+0.5,'A':inter[4]},
+                  'glEnd();',
+                  'glBegin(GL_TRIANGLES);',
+                  'glColor3f(%(RGB)s);' %{'RGB':RGB(shades[i,j,1,1])},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+1,'y':j,'A':inter[2]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+1,'y':j+0.5,'A':inter[5]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+0.5,'y':j+0.5,'A':inter[4]},
+                  'glEnd();',
+                  
+                  'glBegin(GL_TRIANGLES);',
+                  'glColor3f(%(RGB)s);' %{'RGB':RGB(shades[i,j,2,0])},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i,'y':j+0.5,'A':inter[3]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+0.5,'y':j+0.5,'A':inter[4]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i,'y':j+1,'A':inter[6]},
+                  'glEnd();',
+                  'glBegin(GL_TRIANGLES);',
+                  'glColor3f(%(RGB)s);' %{'RGB':RGB(shades[i,j,2,1])},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+0.5,'y':j+0.5,'A':inter[4]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+0.5,'y':j+1,'A':inter[7]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i,'y':j+1,'A':inter[6]},
+                  'glEnd();',
+                  
+                  'glBegin(GL_TRIANGLES);',
+                  'glColor3f(%(RGB)s);' %{'RGB':RGB(shades[i,j,3,0])},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+0.5,'y':j+0.5,'A':inter[4]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+1,'y':j+0.5,'A':inter[5]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+0.5,'y':j+1,'A':inter[7]},
+                  'glEnd();',
+                  'glBegin(GL_TRIANGLES);',
+                  'glColor3f(%(RGB)s);' %{'RGB':RGB(shades[i,j,3,1])},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+1,'y':j+0.5,'A':inter[5]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+1,'y':j+1,'A':inter[8]},
+                  'glVertex3f(%(x)s,%(A)s,%(y)s);' %{'x':i+0.5,'y':j+1,'A':inter[7]},
+                  'glEnd();')
+  return "\n".join(OpenGLString)
+
 def generateGL(A,shades):
   # Extend to each box in the grid
   # restricted domain. For the full extent, replace 10 with m,n
   m, n = A.shape
   string = ''
-  for i in xrange(100):
-    for j in xrange(100):
-      string = string + trianglePair(i,j,A,shades)
+  for i in xrange(50):
+    for j in xrange(50):
+      string = string + triangleOctuple(i,j,A,shades) # replace with tripair
   return string
 
 def generateGLUT(A,shades):
@@ -168,22 +279,27 @@ def generateGLUT(A,shades):
   outfile.close()
 
 heightMap = numpy.load('fromZero.npy')
-#sample_datetime = datetime.datetime(2014,3,8,10,0)
-#unscaledSunV = azalt2normalVector(*datetime2azalt(sample_datetime))
+sample_datetime = datetime.datetime(2014,3,8,10,0)
+unscaledSunV = azalt2normalVector(*datetime2azalt(sample_datetime))
 # Scale the sun vector by the hourly irradiance
-#sunV = irradianceScaled(unscaledSunV,sample_datetime)
+sunV = irradianceScaled(unscaledSunV,sample_datetime)
 
 #makeNormalVectorArray(heightMap)
-normalVectorMap = numpy.load('normalVectorArray.npy')
+#normalVectorMap = numpy.load('normalVectorArray.npy')
 
-emptyArray = numpy.zeros((100,100,2))
-print emptyArray.shape
-hourAvArray = hourAverage(normalVectorMap,emptyArray)
-print hourAvArray[5,5,0]
-hourAvFile = open('hourAverageArray.npy', 'w')
-numpy.save(hourAvFile,hourAvArray)
+#makeSmoothedNormalVectorArray(heightMap)
+#smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
+
+#emptyArray = numpy.zeros((100,100,2))
+#hourAvArray = hourAverage(normalVectorMap,emptyArray)
+#hourAvFile = open('hourAverageArray.npy', 'w')
+#numpy.save(hourAvFile,hourAvArray)
 
 #shaderArray(normalVectorMap,sunV)
 #shaderMap = numpy.load('hourAverageArray.npy')
 
-generateGLUT(heightMap,hourAvArray)
+#smoothedShaderArray(smoothedNormalVectorMap,sunV)
+smoothedShaderMap = numpy.load('smoothedScalarArray.npy')
+
+#shaderMap = numpy.load('hourAverageArray.npy')
+generateGLUT(heightMap,smoothedShaderMap)
