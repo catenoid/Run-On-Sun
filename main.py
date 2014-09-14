@@ -25,6 +25,10 @@ def azalt2normalVector(az,alt):
   z = -numpy.cos(alt)*numpy.cos(az)
   return numpy.array([x,y,z])
 
+def irradianceScaled(sunV,datetime):
+  # Gave up trying to find real hourly insolation data for this latitude
+  return sunV * (1 - numpy.cos((2*numpy.pi*datetime.hour)/ 24))
+
 def makeArray(filename):
   # Extract what we want from the GIS file
   # filename = 'SP5106_DSM_1M.asc'
@@ -81,16 +85,39 @@ def dotProduct(one,two):
   return numpy.dot(one,two)
 
 def shaderArray(A,sunV):
-  # dot each normal vector with the sun vector
-  # insert this scaler where the normal vector once was
-  scalarArray = numpy.zeros((100,100,2))
+  # dot each normal vector with the averaged sun vector
   #m, n = A.shape[0],A.shape[1]
+  scalarArray = numpy.zeros((100,100,2))
   for i in xrange(100):
     for j in xrange(100):
       for k in (0,1):
           scalarArray[i,j,k] = max(0,dotProduct(sunV,A[i,j,k]))
   arrayFile = open('scalarArray.npy', 'w')
   numpy.save(arrayFile,scalarArray)
+
+
+def updateShaderArray(A,scalarArray,sunV):
+  # dot each normal vector with sun vector and accumulate
+  #m, n = A.shape[0],A.shape[1]
+  for i in xrange(100):
+    for j in xrange(100):
+      for k in (0,1):
+          scalarArray[i,j,k] += max(0,dotProduct(sunV,A[i,j,k]))
+
+def normaliseArray(A):
+  minimum = A.min()
+  maximum = A.max()
+  return (A - maximum)/(maximum - minimum)
+
+#scalarArray = numpy.zeros((100,100,2))
+#for hour in xrange(24):
+#  now = datetime.datetime(2014,3,8,hour,0)
+#  unscaledSun = azalt2normalVector(*datetime2azalt(now))
+#  # Scale the sun vector by the hourly irradiance
+#  sun = irradianceScaled(unscaledSun,now)
+#  updateShaderArray(heightMap,scalarArray,sun)
+#arrayFile = open('scalarArray.npy', 'w')
+#numpy.save(arrayFile,scalarArray)
 
 # Under construction: New heatmap
 #norm = matplotlib.colors.Normalize(vmin=0, vmax=1, clip=False)
@@ -144,11 +171,11 @@ def generateGLUT(A,shades):
 
 heightMap = numpy.load('fromZero.npy')
 sample_datetime = datetime.datetime(2014,3,8,10,0)
-sunV = azalt2normalVector(*datetime2azalt(sample_datetime))
+unscaledSunV = azalt2normalVector(*datetime2azalt(sample_datetime))
 # Scale the sun vector by the hourly irradiance
-# sunV = irradianceScaled(sunV,sample_datetime)
+sunV = irradianceScaled(unscaledSunV,sample_datetime)
 
-makeNormalVectorArray(heightMap)
+#makeNormalVectorArray(heightMap)
 normalVectorMap = numpy.load('normalVectorArray.npy')
 
 shaderArray(normalVectorMap,sunV)
