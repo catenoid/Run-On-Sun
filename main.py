@@ -1,5 +1,6 @@
 # main.py
 
+import math
 import numpy
 import ephem
 import datetime
@@ -169,7 +170,7 @@ def hourAverage(heightMap,scalarArray):
 #  r, g, b, alpha = smap.to_rgba(value, alpha=None, bytes=True)
 #  return '%(red)s,%(green)s,%(blue)s' % {'red':r,'green':g,'blue':b} 
 
-def RGB(value):
+def oldRGB(value):
   # convert to RGB with linear interpolation
   # in this case, zero is blue (cold) and one is red (hot)
   if value > 1 or value < 0:
@@ -177,7 +178,20 @@ def RGB(value):
   b = float(max(0, (1 - 2*value)))
   r = float(max(0, (2*value - 1)))
   g = float(1 - b - r)
-  print r,g,b
+  return '%(red)sf,%(green)sf,%(blue)sf' % {'red':r,'green':g,'blue':b}
+
+def RGB(value):
+  if value > 1 or value < 0:
+    return '0.f,0.f,0.f' # black
+  # blue, cyan, green, yellow, red with linear interpolation
+  colours = [[0,0,1],[0,1,1],[0,1,0],[1,1,0],[1,0,0]]
+  N = len(colours)
+  lower = math.floor(value*(N-1))
+  f = value*(N-1) - lower
+  first = int(lower)
+  r = float(f*(colours[first][0]-colours[first+1][0])+colours[first][0])
+  g = float(f*(colours[first][1]-colours[first+1][1])+colours[first][1])
+  b = float(f*(colours[first][2]-colours[first+1][2])+colours[first][2])
   return '%(red)sf,%(green)sf,%(blue)sf' % {'red':r,'green':g,'blue':b}
 
 def trianglePair(i,j,A,shades):
