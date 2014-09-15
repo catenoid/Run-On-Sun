@@ -27,7 +27,7 @@ def azalt2normalVector(az,alt):
 
 def irradianceScaled(sunV,datetime):
   # Gave up trying to find real hourly insolation data for this latitude
-  return sunV * (1 - numpy.cos((2*numpy.pi*datetime.hour)/ 24))
+  return sunV * 0.5 *(1 - numpy.cos((2*numpy.pi*datetime.hour)/ 24))
 
 def makeArray(filename):
   # Extract what we want from the GIS file
@@ -134,7 +134,8 @@ def smoothedShaderArray(A,sunV):
     for j in xrange(100):
       for quad in xrange(4):
         for k in (0,1):
-          smoothedScalarArray[i,j,quad,k] = max(0,dotProduct(sunV,A[i,j,quad,k]))
+          smoothedScalarArray[i,j,quad,k] = float(max(0,dotProduct(sunV,A[i,j,quad,k])))
+          if smoothedScalarArray[i,j,quad,k]>1 or smoothedScalarArray[i,j,quad,k]<0: print 'outofbounds\n'
   arrayFile = open('smoothedScalarArray.npy', 'w')
   numpy.save(arrayFile,smoothedScalarArray)
   
@@ -169,12 +170,15 @@ def hourAverage(heightMap,scalarArray):
 #  return '%(red)s,%(green)s,%(blue)s' % {'red':r,'green':g,'blue':b} 
 
 def RGB(value):
-  # From a normalised shade zero to one, convert to RGB with linear interpolation
+  # convert to RGB with linear interpolation
   # in this case, zero is blue (cold) and one is red (hot)
-  b = max(0, (1 - 2*value))
-  r = max(0, (2*value - 1))
-  g = 1 - b - r
-  return '%(red)s,%(green)s,%(blue)s' % {'red':r,'green':g,'blue':b}
+  if value > 1 or value < 0:
+    return '0.f,0.f,0.f' # black
+  b = float(max(0, (1 - 2*value)))
+  r = float(max(0, (2*value - 1)))
+  g = float(1 - b - r)
+  print r,g,b
+  return '%(red)sf,%(green)sf,%(blue)sf' % {'red':r,'green':g,'blue':b}
 
 def trianglePair(i,j,A,shades):
   # Upper left corner of the bounding square is at coordinate (i,j)
@@ -288,7 +292,7 @@ sunV = irradianceScaled(unscaledSunV,sample_datetime)
 #normalVectorMap = numpy.load('normalVectorArray.npy')
 
 #makeSmoothedNormalVectorArray(heightMap)
-#smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
+smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
 
 #emptyArray = numpy.zeros((100,100,2))
 #hourAvArray = hourAverage(normalVectorMap,emptyArray)
@@ -298,7 +302,7 @@ sunV = irradianceScaled(unscaledSunV,sample_datetime)
 #shaderArray(normalVectorMap,sunV)
 #shaderMap = numpy.load('hourAverageArray.npy')
 
-#smoothedShaderArray(smoothedNormalVectorMap,sunV)
+smoothedShaderArray(smoothedNormalVectorMap,sunV)
 smoothedShaderMap = numpy.load('smoothedScalarArray.npy')
 
 #shaderMap = numpy.load('hourAverageArray.npy')
