@@ -135,7 +135,7 @@ def smoothedShaderArray(A,sunV):
     for j in xrange(100):
       for quad in xrange(4):
         for k in (0,1):
-          smoothedScalarArray[i,j,quad,k] = float(max(0,dotProduct(sunV,A[i,j,quad,k])))
+          smoothedScalarArray[i,j,quad,k] = float(dotProduct(sunV,A[i,j,quad,k]))
           if smoothedScalarArray[i,j,quad,k]>1 or smoothedScalarArray[i,j,quad,k]<0: print 'outofbounds\n'
   arrayFile = open('smoothedScalarArray.npy', 'w')
   numpy.save(arrayFile,smoothedScalarArray)
@@ -163,13 +163,6 @@ def hourAverage(heightMap,scalarArray):
     scalarArray = updateShaderArray(heightMap,scalarArray,sun)
   return normaliseArray(scalarArray)
 
-# Under construction: New heatmap
-#norm = matplotlib.colors.Normalize(vmin=0, vmax=1, clip=False)
-#smap = matplotlib.cm.ScalarMappable(norm, CMAP)
-#def matplotlibRGB(value):
-#  r, g, b, alpha = smap.to_rgba(value, alpha=None, bytes=True)
-#  return '%(red)s,%(green)s,%(blue)s' % {'red':r,'green':g,'blue':b} 
-
 def oldRGB(value):
   # convert to RGB with linear interpolation
   # in this case, zero is blue (cold) and one is red (hot)
@@ -189,9 +182,9 @@ def RGB(value):
   lower = math.floor(value*(N-1))
   f = value*(N-1) - lower
   first = int(lower)
-  r = float(f*(colours[first][0]-colours[first+1][0])+colours[first][0])
-  g = float(f*(colours[first][1]-colours[first+1][1])+colours[first][1])
-  b = float(f*(colours[first][2]-colours[first+1][2])+colours[first][2])
+  r = float(f*(colours[first+1][0]-colours[first][0])+colours[first][0])
+  g = float(f*(colours[first+1][1]-colours[first][1])+colours[first][1])
+  b = float(f*(colours[first+1][2]-colours[first][2])+colours[first][2])
   return '%(red)sf,%(green)sf,%(blue)sf' % {'red':r,'green':g,'blue':b}
 
 def trianglePair(i,j,A,shades):
@@ -279,6 +272,24 @@ def triangleOctuple(i,j,A,shades):
                   'glEnd();')
   return "\n".join(OpenGLString)
 
+## Alternate method. Instead of using the >0DP, mask with the shadow map
+## That way, can use the average sun vector, so do not need to do hourly simulations
+
+def filterShadows(shadowMap, shaderMap, i, j):
+  # shaderMap M by N by 4 by 2
+  # shadowMap M by N, 1 is shaded, 0 is unshaded
+  for i in xrange(1,10):
+    for j in xrange(1,10):
+      if shadowMap[i,j] == 1:
+        shaderMap[i-1,j-1,3,0] = 0
+        shaderMap[i-1,j-1,3,1] = 0
+        shaderMap[i  ,j-1,2,0] = 0
+        shaderMap[i  ,j-1,2,1] = 0
+        shaderMap[i-1,j  ,1,0] = 0
+        shaderMap[i-1,j  ,1,1] = 0
+        shaderMap[i  ,j  ,0,0] = 0
+        shaderMap[i  ,j  ,0,1] = 0
+
 def generateGL(A,shades):
   # Extend to each box in the grid
   # restricted domain. For the full extent, replace 10 with m,n
@@ -297,16 +308,16 @@ def generateGLUT(A,shades):
   outfile.close()
 
 heightMap = numpy.load('fromZero.npy')
-sample_datetime = datetime.datetime(2014,3,8,10,0)
-unscaledSunV = azalt2normalVector(*datetime2azalt(sample_datetime))
+##sample_datetime = datetime.datetime(2014,3,8,10,0)
+##unscaledSunV = azalt2normalVector(*datetime2azalt(sample_datetime))
 # Scale the sun vector by the hourly irradiance
-sunV = irradianceScaled(unscaledSunV,sample_datetime)
+##sunV = irradianceScaled(unscaledSunV,sample_datetime)
 
 #makeNormalVectorArray(heightMap)
 #normalVectorMap = numpy.load('normalVectorArray.npy')
 
 #makeSmoothedNormalVectorArray(heightMap)
-smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
+##smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
 
 #emptyArray = numpy.zeros((100,100,2))
 #hourAvArray = hourAverage(normalVectorMap,emptyArray)
@@ -316,7 +327,7 @@ smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
 #shaderArray(normalVectorMap,sunV)
 #shaderMap = numpy.load('hourAverageArray.npy')
 
-smoothedShaderArray(smoothedNormalVectorMap,sunV)
+#smoothedShaderArray(smoothedNormalVectorMap,sunV)
 smoothedShaderMap = numpy.load('smoothedScalarArray.npy')
 
 #shaderMap = numpy.load('hourAverageArray.npy')
