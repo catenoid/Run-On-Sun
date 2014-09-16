@@ -64,15 +64,16 @@ def crossProduct(i,j,A):
 
 def smoothedCrossProduct(i,j,inter):
   # Now makes 8 vectors
-  one = normalised(numpy.array([inter[1]-inter[0],1,inter[0]-inter[3]]))
-  two = normalised(numpy.array([inter[3]-inter[4],1,inter[1]-inter[4]]))
-  thr = normalised(numpy.array([inter[2]-inter[1],1,inter[1]-inter[4]]))
-  fou = normalised(numpy.array([inter[4]-inter[5],1,inter[2]-inter[5]]))
-  fiv = normalised(numpy.array([inter[4]-inter[3],1,inter[3]-inter[6]]))
-  six = normalised(numpy.array([inter[6]-inter[7],1,inter[4]-inter[7]]))
-  sev = normalised(numpy.array([inter[5]-inter[4],1,inter[4]-inter[7]]))
-  eig = normalised(numpy.array([inter[7]-inter[8],1,inter[5]-inter[8]]))
-  return (one,two,thr,fou,fiv,six,sev,eig)
+  # Once halved, vector magnitude is area of triangle
+  one = numpy.array([inter[1]-inter[0],1,inter[0]-inter[3]])
+  two = numpy.array([inter[3]-inter[4],1,inter[1]-inter[4]])
+  thr = numpy.array([inter[2]-inter[1],1,inter[1]-inter[4]])
+  fou = numpy.array([inter[4]-inter[5],1,inter[2]-inter[5]])
+  fiv = numpy.array([inter[4]-inter[3],1,inter[3]-inter[6]])
+  six = numpy.array([inter[6]-inter[7],1,inter[4]-inter[7]])
+  sev = numpy.array([inter[5]-inter[4],1,inter[4]-inter[7]])
+  eig = numpy.array([inter[7]-inter[8],1,inter[5]-inter[8]])
+  return 0.5*(one,two,thr,fou,fiv,six,sev,eig)
 
 def normalised(vector):
   return vector / numpy.linalg.norm(vector)
