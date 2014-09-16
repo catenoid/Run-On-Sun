@@ -5,10 +5,6 @@ import numpy
 import ephem
 import datetime
 
-#import matplotlib.cm
-#import matplotlib.colors
-#CMAP = 'nipy_spectral'
-
 def datetime2azalt(datetime):
   # At datetime, what is the angular location
   # of the sun over the map in radians?
@@ -28,6 +24,7 @@ def azalt2normalVector(az,alt):
 
 def irradianceScaled(sunV,datetime):
   # Gave up trying to find real hourly insolation data for this latitude
+  # AFAIK, three kinds of solar irradiance data: global, direct and diffuse
   return sunV * 0.5 *(1 - numpy.cos((2*numpy.pi*datetime.hour)/ 24))
 
 def makeArray(filename):
@@ -328,7 +325,7 @@ smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
 #shaderArray(normalVectorMap,sunV)
 #shaderMap = numpy.load('hourAverageArray.npy')
 
-smoothedShaderArray(smoothedNormalVectorMap,sunV)
+#smoothedShaderArray(smoothedNormalVectorMap,sunV)
 smoothedShaderMap = numpy.load('smoothedScalarArray.npy')
 
 #shaderMap = numpy.load('hourAverageArray.npy')
