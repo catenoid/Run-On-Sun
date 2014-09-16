@@ -133,8 +133,7 @@ def smoothedShaderArray(A,sunV):
     for j in xrange(100):
       for quad in xrange(4):
         for k in (0,1):
-          smoothedScalarArray[i,j,quad,k] = float(dotProduct(sunV,A[i,j,quad,k]))
-          if smoothedScalarArray[i,j,quad,k]>1 or smoothedScalarArray[i,j,quad,k]<0: print 'outofbounds\n'
+          smoothedScalarArray[i,j,quad,k] = float(max(0,numpy.dot(sunV,A[i,j,quad,k])))
   arrayFile = open('smoothedScalarArray.npy', 'w')
   numpy.save(arrayFile,smoothedScalarArray)
   
@@ -145,7 +144,7 @@ def updateShaderArray(A,scalarArray,sunV):
   for i in xrange(100):
     for j in xrange(100):
       for k in (0,1):
-          scalarArray[i,j,k] += max(0,dotProduct(sunV,A[i,j,k]))
+          scalarArray[i,j,k] += float(max(0,numpy.dot(sunV,A[i,j,k])))
   return scalarArray
 
 def normaliseArray(A):
@@ -161,30 +160,24 @@ def hourAverage(heightMap,scalarArray):
     scalarArray = updateShaderArray(heightMap,scalarArray,sun)
   return normaliseArray(scalarArray)
 
-def oldRGB(value):
-  # convert to RGB with linear interpolation
-  # in this case, zero is blue (cold) and one is red (hot)
-  if value > 1 or value < 0:
-    return '0.f,0.f,0.f' # black
-  b = float(max(0, (1 - 2*value)))
-  r = float(max(0, (2*value - 1)))
-  g = float(1 - b - r)
-  return '%(red)sf,%(green)sf,%(blue)sf' % {'red':r,'green':g,'blue':b}
-
 def RGB(value):
-  # These shouldn't occur on a normalised array, but they still do...
-  if value >= 1:
+  if value > 1:
+    print 'Warning, value > 1'
     return '1.f,0.f,0.f' # red
+  elif value == 1:
+    return '1.f,0.f,0.f' # red 
   elif value < 0:
+    print 'Warning, value < 0'
     return '0.f,0.f,1.f' #blue
 
   # blue, cyan, green, yellow, red with linear interpolation
-  colours = [[0,0,1],[1,0,0]] #[[0,0,1],[0,1,1],[0,1,0],[1,1,0],[1,0,0]]
+  # Serious outlier problem here, causing almost all values to fall between the first 2 colours
+  #colours =[[0,0,1],[0,1,1],[0,1,0],[1,1,0],[1,0,0]]
+  colours =[[1,1,1],[1,0,0],[0,1,0],[1,1,0],[1,0,0]]
   N = len(colours)
   lower = math.floor(value*(N-1))
   f = value*(N-1) - lower
   first = int(lower)
-  print value, lower, f, first
   r = float(f*(colours[first+1][0]-colours[first][0])+colours[first][0])
   g = float(f*(colours[first+1][1]-colours[first][1])+colours[first][1])
   b = float(f*(colours[first+1][2]-colours[first][2])+colours[first][2])
@@ -281,11 +274,12 @@ def triangleOctuple(i,j,A,shades):
 
 def maskShadows(shadowMap, shaderMap):
   # shaderMap M by N by 4 by 2
-  # shadowMap M by N, 1 is shaded, 0 is unshaded
+  # shadowMap M by N, 0 is shaded, 1 is unshaded
   # This just turns triangles blue that are shaded
-  for i in xrange(1,10):
-    for j in xrange(1,10):
+  for i in xrange(1,98):
+    for j in xrange(1,98):
       if shadowMap[i,j] == 0:
+        print 'set shadow at ', i, j
         shaderMap[i-1,j-1,3,0] = 0
         shaderMap[i-1,j-1,3,1] = 0
         shaderMap[i  ,j-1,2,0] = 0
@@ -308,7 +302,8 @@ def generateGL(A,shades):
 
 def generateGLUT(A,shades):
   # Camera movement, ground etc.
-  data = open('template.c', 'r').read() % {'triangulate':generateGL(A,shades)}
+  normalisedShades = normaliseArray(shades)
+  data = open('template.c', 'r').read() % {'triangulate':generateGL(A,normalisedShades)}
   outfile = open('current.c', 'w')
   outfile.write(data)
   outfile.close()
@@ -336,10 +331,9 @@ smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
 #smoothedShaderArray(smoothedNormalVectorMap,sunV)
 smoothedShaderMap = numpy.load('smoothedScalarArray.npy')
 
-shadowMap = numpy.load("shadowMap.npy")
+#shadowMap = numpy.load("shadowMap.npy")
 
-maskedShaderMap = maskShadows(shadowMap,smoothedShaderMap)
-normalisedShader = normaliseArray(maskedShaderMap)
+#maskedShaderMap = maskShadows(shadowMap,smoothedShaderMap)
 
 #shaderMap = numpy.load('hourAverageArray.npy')
-generateGLUT(heightMap,normalisedShader)
+generateGLUT(heightMap,smoothedShaderMap)
