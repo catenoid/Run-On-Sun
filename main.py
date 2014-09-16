@@ -65,15 +65,15 @@ def crossProduct(i,j,A):
 def smoothedCrossProduct(i,j,inter):
   # Now makes 8 vectors
   # Once halved, vector magnitude is area of triangle
-  one = numpy.array([inter[1]-inter[0],1,inter[0]-inter[3]])
-  two = numpy.array([inter[3]-inter[4],1,inter[1]-inter[4]])
-  thr = numpy.array([inter[2]-inter[1],1,inter[1]-inter[4]])
-  fou = numpy.array([inter[4]-inter[5],1,inter[2]-inter[5]])
-  fiv = numpy.array([inter[4]-inter[3],1,inter[3]-inter[6]])
-  six = numpy.array([inter[6]-inter[7],1,inter[4]-inter[7]])
-  sev = numpy.array([inter[5]-inter[4],1,inter[4]-inter[7]])
-  eig = numpy.array([inter[7]-inter[8],1,inter[5]-inter[8]])
-  return 0.5*(one,two,thr,fou,fiv,six,sev,eig)
+  one = 0.5*numpy.array([inter[1]-inter[0],1,inter[0]-inter[3]])
+  two = 0.5*numpy.array([inter[3]-inter[4],1,inter[1]-inter[4]])
+  thr = 0.5*numpy.array([inter[2]-inter[1],1,inter[1]-inter[4]])
+  fou = 0.5*numpy.array([inter[4]-inter[5],1,inter[2]-inter[5]])
+  fiv = 0.5*numpy.array([inter[4]-inter[3],1,inter[3]-inter[6]])
+  six = 0.5*numpy.array([inter[6]-inter[7],1,inter[4]-inter[7]])
+  sev = 0.5*numpy.array([inter[5]-inter[4],1,inter[4]-inter[7]])
+  eig = 0.5*numpy.array([inter[7]-inter[8],1,inter[5]-inter[8]])
+  return (one,two,thr,fou,fiv,six,sev,eig)
 
 def normalised(vector):
   return vector / numpy.linalg.norm(vector)
@@ -309,16 +309,16 @@ def generateGLUT(A,shades):
   outfile.close()
 
 heightMap = numpy.load('fromZero.npy')
-##sample_datetime = datetime.datetime(2014,3,8,10,0)
-##unscaledSunV = azalt2normalVector(*datetime2azalt(sample_datetime))
+sample_datetime = datetime.datetime(2014,3,8,10,0)
+unscaledSunV = azalt2normalVector(*datetime2azalt(sample_datetime))
 # Scale the sun vector by the hourly irradiance
-##sunV = irradianceScaled(unscaledSunV,sample_datetime)
+sunV = irradianceScaled(unscaledSunV,sample_datetime)
 
 #makeNormalVectorArray(heightMap)
 #normalVectorMap = numpy.load('normalVectorArray.npy')
 
 #makeSmoothedNormalVectorArray(heightMap)
-##smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
+smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
 
 #emptyArray = numpy.zeros((100,100,2))
 #hourAvArray = hourAverage(normalVectorMap,emptyArray)
@@ -328,7 +328,7 @@ heightMap = numpy.load('fromZero.npy')
 #shaderArray(normalVectorMap,sunV)
 #shaderMap = numpy.load('hourAverageArray.npy')
 
-#smoothedShaderArray(smoothedNormalVectorMap,sunV)
+smoothedShaderArray(smoothedNormalVectorMap,sunV)
 smoothedShaderMap = numpy.load('smoothedScalarArray.npy')
 
 #shaderMap = numpy.load('hourAverageArray.npy')
