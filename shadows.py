@@ -2,7 +2,6 @@ import Image
 import numpy
 import ephem
 import datetime
-import main
 
 def datetime2azalt(datetime):
   # At datetime, what is the angular location
@@ -58,10 +57,12 @@ def generateBitmask(buildingMap, datetime, NSamples):
       if(0<=tupleinterpolated[0]<100 and 0<tupleinterpolated[1]<100): # Check shadow's in range
         if(shadowH > buildingMap[tupleinterpolated]):
           shadowMap[tupleinterpolated] = 0
-  return shadowMap
+  arrayFile = open('shadowMap.npy', 'w')
+  numpy.save(arrayFile,shadowMap)
 
 sample_datetime = datetime.datetime(2014,3,8,10,0)
 heightMap = numpy.load('fromZero.npy')
-bitmask = generateBitmask(heightMap,sample_datetime,9999)
-bitmaskImage = array2image(bitmask)
-bitmaskImage.save('shadowMap_100by100_99999_samples.png')
+#generateBitmask(heightMap,sample_datetime,9999)
+shadowMap = numpy.load('shadowMap.npy')
+bitmaskImage = array2image(shadowMap)
+bitmaskImage.save('shadowMap_100by100_9999_2_samples.png')

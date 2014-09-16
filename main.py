@@ -172,14 +172,19 @@ def oldRGB(value):
   return '%(red)sf,%(green)sf,%(blue)sf' % {'red':r,'green':g,'blue':b}
 
 def RGB(value):
-  if value > 1 or value < 0:
-    return '0.f,0.f,0.f' # black
+  # These shouldn't occur on a normalised array, but they still do...
+  if value >= 1:
+    return '1.f,0.f,0.f' # red
+  elif value < 0:
+    return '0.f,0.f,1.f' #blue
+
   # blue, cyan, green, yellow, red with linear interpolation
-  colours = [[0,0,1],[0,1,1],[0,1,0],[1,1,0],[1,0,0]]
+  colours = [[0,0,1],[1,0,0]] #[[0,0,1],[0,1,1],[0,1,0],[1,1,0],[1,0,0]]
   N = len(colours)
   lower = math.floor(value*(N-1))
   f = value*(N-1) - lower
   first = int(lower)
+  print value, lower, f, first
   r = float(f*(colours[first+1][0]-colours[first][0])+colours[first][0])
   g = float(f*(colours[first+1][1]-colours[first][1])+colours[first][1])
   b = float(f*(colours[first+1][2]-colours[first][2])+colours[first][2])
@@ -272,13 +277,15 @@ def triangleOctuple(i,j,A,shades):
 
 ## Alternate method. Instead of using the >0DP, mask with the shadow map
 ## That way, can use the average sun vector, so do not need to do hourly simulations
+## Actually, the above is false.
 
-def filterShadows(shadowMap, shaderMap, i, j):
+def maskShadows(shadowMap, shaderMap):
   # shaderMap M by N by 4 by 2
   # shadowMap M by N, 1 is shaded, 0 is unshaded
+  # This just turns triangles blue that are shaded
   for i in xrange(1,10):
     for j in xrange(1,10):
-      if shadowMap[i,j] == 1:
+      if shadowMap[i,j] == 0:
         shaderMap[i-1,j-1,3,0] = 0
         shaderMap[i-1,j-1,3,1] = 0
         shaderMap[i  ,j-1,2,0] = 0
@@ -287,6 +294,7 @@ def filterShadows(shadowMap, shaderMap, i, j):
         shaderMap[i-1,j  ,1,1] = 0
         shaderMap[i  ,j  ,0,0] = 0
         shaderMap[i  ,j  ,0,1] = 0
+  return shaderMap
 
 def generateGL(A,shades):
   # Extend to each box in the grid
@@ -328,5 +336,10 @@ smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
 #smoothedShaderArray(smoothedNormalVectorMap,sunV)
 smoothedShaderMap = numpy.load('smoothedScalarArray.npy')
 
+shadowMap = numpy.load("shadowMap.npy")
+
+maskedShaderMap = maskShadows(shadowMap,smoothedShaderMap)
+normalisedShader = normaliseArray(maskedShaderMap)
+
 #shaderMap = numpy.load('hourAverageArray.npy')
-generateGLUT(heightMap,smoothedShaderMap)
+generateGLUT(heightMap,normalisedShader)
