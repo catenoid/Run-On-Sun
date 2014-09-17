@@ -1,22 +1,21 @@
-# main.py
-
 import math
 import numpy
 import ephem
 import datetime
 
 def datetime2azalt(datetime):
-  # At datetime, what is the angular location
-  # of the sun over the map in radians?
-  # azimuthal angle is measured clockwise from north
-  # altitude angle is the elevation from the horizon
+  """At datetime, what is the angular location
+  of the sun over the map in radians?
+  azimuthal angle is measured clockwise from north
+  altitude angle is the elevation from the horizon
+  """
   o = ephem.Observer()
   o.lat, o.long, o.date = '51:45', '-1:15', datetime
   sun = ephem.Sun(o)
   return float(sun.az), float(sun.alt)
 
 def azalt2normalVector(az,alt):
-  # turn the two angles into a cartesian vector
+  """turn the two angles into a cartesian vector"""
   x =  numpy.cos(alt)*numpy.sin(az)
   y =  numpy.sin(alt)
   z = -numpy.cos(alt)*numpy.cos(az)
@@ -28,7 +27,7 @@ def irradianceScaled(sunV,datetime):
   return sunV * 0.5 *(1 - numpy.cos((2*numpy.pi*datetime.hour)/ 24))
 
 def makeArray(filename):
-  # Extract what we want from the GIS file
+  """Converts space delimited height data into a numpy array"""
   # filename = 'SP5106_DSM_1M.asc'
   data = open(filename, 'r')
   print "Opened file"
@@ -110,12 +109,6 @@ def makeSmoothedNormalVectorArray(A):
   arrayFile = open('smoothedNormalVectorArray.npy', 'w')
   numpy.save(arrayFile,smoothedNormalVectorArray)
 
-def dotProduct(one,two):
-  # computes a dot product
-  # in context, between a triangle's normal vector
-  # and the sun ray vector
-  return numpy.dot(one,two)
-
 def shaderArray(A,sunV):
   # dot each normal vector with the averaged sun vector
   #m, n = A.shape[0],A.shape[1]
@@ -123,7 +116,7 @@ def shaderArray(A,sunV):
   for i in xrange(100):
     for j in xrange(100):
       for k in (0,1):
-          scalarArray[i,j,k] = max(0,dotProduct(sunV,A[i,j,k]))
+        scalarArray[i,j,k] = max(0,dotProduct(sunV,A[i,j,k]))
   arrayFile = open('scalarArray.npy', 'w')
   numpy.save(arrayFile,scalarArray)
 
@@ -137,28 +130,32 @@ def smoothedShaderArray(A,sunV):
   arrayFile = open('smoothedScalarArray.npy', 'w')
   numpy.save(arrayFile,smoothedScalarArray)
   
-def updateShaderArray(A,scalarArray,shadowMap,sunV):
+def updateShaderArray(A,shaderMap,shadowMap,sunV):
   # dot each normal vector with sun vector and accumulate
   #m, n = A.shape[0],A.shape[1]
   for i in xrange(100):
     for j in xrange(100):
-      for quad in xrange(4):
-        for k in (0,1):
-          scalarArray[i,j,quad,k] += float(max(0,numpy.dot(sunV,A[i,j,quad,k])))
-  maskedShaderMap = maskShadows(shadowMap,scalarArray)
-  return maskedShaderMap
+      if shadowMap[i,j] != 0:
+        for quad in xrange(4):
+          for k in (0,1):
+            shaderMap[i,j,quad,k] += float(max(0,numpy.dot(sunV,A[i,j,quad,k])))
+  return shaderMap
 
 def normaliseArray(A):
   minimum = A.min()
   maximum = A.max()
   return (A - minimum)/(maximum - minimum)
 
-def hourAverage(smoothedNormalVectorMap,scalarArray,shadowMap):
+def hourAverage(smoothedNormalVectorMap,scalarArray):
   for hour in xrange(24):
     now = datetime.datetime(2014,3,8,hour,0)
     unscaledSun = azalt2normalVector(*datetime2azalt(now))
-    sun = irradianceScaled(unscaledSun,now)
+    # Direct radiation exposure
+    sun = 0.85 * irradianceScaled(unscaledSun,now)
+    shadowMap = numpy.load('shadowMap_'+str(hour)+'h.npy')
     scalarArray = updateShaderArray(smoothedNormalVectorMap,scalarArray,shadowMap,sun)
+    # Diffuse radiation exposure
+    scalarArray += 0.15 * numpy.linalg.norm(irradianceScaled(unscaledSun,now)) 
   return normaliseArray(scalarArray)
 
 def RGB(value):
@@ -308,10 +305,10 @@ def generateGLUT(A,shades):
   outfile.close()
 
 heightMap = numpy.load('fromZero.npy')
-sample_datetime = datetime.datetime(2014,3,8,10,0)
-unscaledSunV = azalt2normalVector(*datetime2azalt(sample_datetime))
+#sample_datetime = datetime.datetime(2014,3,8,10,0)
+#unscaledSunV = azalt2normalVector(*datetime2azalt(sample_datetime))
 # Scale the sun vector by the hourly irradiance
-sunV = irradianceScaled(unscaledSunV,sample_datetime)
+#sunV = irradianceScaled(unscaledSunV,sample_datetime)
 
 #makeNormalVectorArray(heightMap)
 #normalVectorMap = numpy.load('normalVectorArray.npy')
@@ -320,8 +317,8 @@ sunV = irradianceScaled(unscaledSunV,sample_datetime)
 smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
 
 emptyArray = numpy.zeros((100,100,4,2))
-shadowMap = numpy.load("shadowMapSignsReversed.npy")
-hourAvArray = hourAverage(smoothedNormalVectorMap,emptyArray,shadowMap)
+#shadowMap = numpy.load("shadowMapSignsReversed.npy")
+hourAvArray = 10*hourAverage(smoothedNormalVectorMap,emptyArray)
 #hourAvFile = open('hourAverageArray.npy', 'w')
 #numpy.save(hourAvFile,hourAvArray)
 

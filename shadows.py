@@ -20,13 +20,20 @@ def array2image(array):
   return im
 
 def generateBitmask(buildingMap, datetime, NSamples):
-  # A shadow map Bitmask represents a map defined for each point in the plane
-  # that defines WHETHER an object standing at that point
-  # will be shaded by the occulting structure(s) around it.
+  """A shadow map bitmask represents a map
+  that defines whether an object standing at a certain point
+  will be shaded by the occulting structure(s) around it.
+  """
+  # Check the sun is above the horizon
+  az, alt = datetime2azalt(datetime)
+  if alt <= 0 or alt >= numpy.pi:
+    # All shadow
+    arrayFile = open('shadowMap_'+str(datetime.hour)+'h.npy', 'w')
+    print 'opened for hour ' + str(datetime.hour)
+    numpy.save(arrayFile,numpy.zeros((100,100)))
+    return
   ground = buildingMap.min()
   shadowMap = numpy.ones((100,100))
-  az, alt = datetime2azalt(datetime)
-
   # Check which quadrant we're in
   if numpy.sin(az) > 0:
     azDispl = numpy.array([-1, numpy.cos(az)/numpy.sin(az)])
@@ -57,12 +64,19 @@ def generateBitmask(buildingMap, datetime, NSamples):
       if(0<=tupleinterpolated[0]<100 and 0<tupleinterpolated[1]<100): # Check shadow's in range
         if(shadowH > buildingMap[tupleinterpolated]):
           shadowMap[tupleinterpolated] = 0
-  arrayFile = open('shadowMapSignsReversed.npy', 'w')
+  arrayFile = open('shadowMap_'+str(datetime.hour)+'h.npy', 'w')
+  print 'opened for hour ' + str(datetime.hour)
   numpy.save(arrayFile,shadowMap)
+  arrayFile.close()
 
-sample_datetime = datetime.datetime(2014,3,8,10,0)
-heightMap = numpy.load('fromZero.npy')
-generateBitmask(heightMap,sample_datetime,9999)
-shadowMap = numpy.load('shadowMapSignsReversed.npy')
-bitmaskImage = array2image(shadowMap)
-bitmaskImage.save('shadowMap_100by100_9999_Reversed.png')
+#sample_datetime = datetime.datetime(2014,3,8,0,0)
+#heightMap = numpy.load('fromZero.npy')
+#generateBitmask(heightMap,sample_datetime,9999)
+
+#for hour in xrange(24):
+#  now = datetime.datetime(2014,3,8,hour,0)
+#  generateBitmask(heightMap,now,9999)
+
+#shadowMap = numpy.load('shadowMapSignsReversed.npy')
+#bitmaskImage = array2image(shadowMap)
+#bitmaskImage.save('shadowMap_100by100_9999_Reversed.png')
