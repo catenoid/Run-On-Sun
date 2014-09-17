@@ -137,27 +137,28 @@ def smoothedShaderArray(A,sunV):
   arrayFile = open('smoothedScalarArray.npy', 'w')
   numpy.save(arrayFile,smoothedScalarArray)
   
-
-def updateShaderArray(A,scalarArray,sunV):
+def updateShaderArray(A,scalarArray,shadowMap,sunV):
   # dot each normal vector with sun vector and accumulate
   #m, n = A.shape[0],A.shape[1]
   for i in xrange(100):
     for j in xrange(100):
-      for k in (0,1):
-          scalarArray[i,j,k] += float(max(0,numpy.dot(sunV,A[i,j,k])))
-  return scalarArray
+      for quad in xrange(4):
+        for k in (0,1):
+          scalarArray[i,j,quad,k] += float(max(0,numpy.dot(sunV,A[i,j,quad,k])))
+  maskedShaderMap = maskShadows(shadowMap,scalarArray)
+  return maskedShaderMap
 
 def normaliseArray(A):
   minimum = A.min()
   maximum = A.max()
   return (A - minimum)/(maximum - minimum)
 
-def hourAverage(heightMap,scalarArray):
+def hourAverage(smoothedNormalVectorMap,scalarArray,shadowMap):
   for hour in xrange(24):
     now = datetime.datetime(2014,3,8,hour,0)
     unscaledSun = azalt2normalVector(*datetime2azalt(now))
     sun = irradianceScaled(unscaledSun,now)
-    scalarArray = updateShaderArray(heightMap,scalarArray,sun)
+    scalarArray = updateShaderArray(smoothedNormalVectorMap,scalarArray,shadowMap,sun)
   return normaliseArray(scalarArray)
 
 def RGB(value):
@@ -165,18 +166,19 @@ def RGB(value):
     print 'Warning, value > 1'
     return '1.f,0.f,0.f' # red
   elif value == 1:
-    return '0.f,0.f,0.f' # black 
+    return '1.f,0.f,0.f' # red 
   elif value < 0:
     print 'Warning, value < 0'
-    return '0.f,0.f,1.f' #blue
+    return '0.f,0.f,1.f' # blue
 
   # blue, cyan, green, yellow, red with linear interpolation
   # Serious outlier problem here, causing almost all values to fall between the first 2 colours
-  colours =[[0,0,1],[0,1,1],[0,1,0],[1,1,0],[1,0,0],[1,0,0],[1,0,0],[1,0,0],[1,0,0],[1,0,0]]
+  colours =[[0,0,1],[0,1,1],[0,1,0],[1,1,0],[1,0,0],[1,0,0]]
   N = len(colours)
   lower = math.floor(value*(N-1))
   f = value*(N-1) - lower
   first = int(lower)
+ 
   r = float(f*(colours[first+1][0]-colours[first][0])+colours[first][0])
   g = float(f*(colours[first+1][1]-colours[first][1])+colours[first][1])
   b = float(f*(colours[first+1][2]-colours[first][2])+colours[first][2])
@@ -278,14 +280,14 @@ def maskShadows(shadowMap, shaderMap):
   for i in xrange(1,98):
     for j in xrange(1,98):
       if shadowMap[i,j] == 0:
-        shaderMap[i-1,j-1,3,0] = 1
-        shaderMap[i-1,j-1,3,1] = 1
-        shaderMap[i  ,j-1,2,0] = 1
-        shaderMap[i  ,j-1,2,1] = 1
-        shaderMap[i-1,j  ,1,0] = 1
-        shaderMap[i-1,j  ,1,1] = 1
-        shaderMap[i  ,j  ,0,0] = 1
-        shaderMap[i  ,j  ,0,1] = 1
+        shaderMap[i-1,j-1,3,0] = 0
+        shaderMap[i-1,j-1,3,1] = 0
+        shaderMap[i  ,j-1,2,0] = 0
+        shaderMap[i  ,j-1,2,1] = 0
+        shaderMap[i-1,j  ,1,0] = 0
+        shaderMap[i-1,j  ,1,1] = 0
+        shaderMap[i  ,j  ,0,0] = 0
+        shaderMap[i  ,j  ,0,1] = 0
   return shaderMap
 
 def generateGL(A,shades):
@@ -317,21 +319,21 @@ sunV = irradianceScaled(unscaledSunV,sample_datetime)
 #makeSmoothedNormalVectorArray(heightMap)
 smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
 
-#emptyArray = numpy.zeros((100,100,2))
-#hourAvArray = hourAverage(normalVectorMap,emptyArray)
+emptyArray = numpy.zeros((100,100,4,2))
+shadowMap = numpy.load("shadowMapSignsReversed.npy")
+hourAvArray = hourAverage(smoothedNormalVectorMap,emptyArray,shadowMap)
 #hourAvFile = open('hourAverageArray.npy', 'w')
 #numpy.save(hourAvFile,hourAvArray)
 
 #shaderArray(normalVectorMap,sunV)
 #shaderMap = numpy.load('hourAverageArray.npy')
 
-smoothedShaderArray(smoothedNormalVectorMap,sunV)
-smoothedShaderMap = numpy.load('smoothedScalarArray.npy')
+#smoothedShaderArray(smoothedNormalVectorMap,sunV)
+#smoothedShaderMap = numpy.load('smoothedScalarArray.npy')
 
-shadowMap = numpy.load("shadowMapSignsReversed.npy")
 
-normalisedShades = normaliseArray(smoothedShaderMap)
-maskedShaderMap = maskShadows(shadowMap,normalisedShades)
+#normalisedShades = normaliseArray(smoothedShaderMap)
+#maskedShaderMap = maskShadows(shadowMap,smoothedShaderMap)
 
-#shaderMap = numpy.load('hourAverageArray.npy')
-generateGLUT(heightMap,maskedShaderMap)
+#maskedShaderMap = numpy.load('hourAverageArray.npy')
+generateGLUT(heightMap,hourAvArray)
