@@ -305,32 +305,11 @@ def generateGLUT(A,shades):
   outfile.close()
 
 heightMap = numpy.load('fromZero.npy')
-#sample_datetime = datetime.datetime(2014,3,8,10,0)
-#unscaledSunV = azalt2normalVector(*datetime2azalt(sample_datetime))
-# Scale the sun vector by the hourly irradiance
-#sunV = irradianceScaled(unscaledSunV,sample_datetime)
-
-#makeNormalVectorArray(heightMap)
-#normalVectorMap = numpy.load('normalVectorArray.npy')
 
 #makeSmoothedNormalVectorArray(heightMap)
 smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
 
 emptyArray = numpy.zeros((100,100,4,2))
-#shadowMap = numpy.load("shadowMapSignsReversed.npy")
 hourAvArray = 10*hourAverage(smoothedNormalVectorMap,emptyArray)
-#hourAvFile = open('hourAverageArray.npy', 'w')
-#numpy.save(hourAvFile,hourAvArray)
 
-#shaderArray(normalVectorMap,sunV)
-#shaderMap = numpy.load('hourAverageArray.npy')
-
-#smoothedShaderArray(smoothedNormalVectorMap,sunV)
-#smoothedShaderMap = numpy.load('smoothedScalarArray.npy')
-
-
-#normalisedShades = normaliseArray(smoothedShaderMap)
-#maskedShaderMap = maskShadows(shadowMap,smoothedShaderMap)
-
-#maskedShaderMap = numpy.load('hourAverageArray.npy')
 generateGLUT(heightMap,hourAvArray)

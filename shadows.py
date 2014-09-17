@@ -69,14 +69,11 @@ def generateBitmask(buildingMap, datetime, NSamples):
   numpy.save(arrayFile,shadowMap)
   arrayFile.close()
 
-#sample_datetime = datetime.datetime(2014,3,8,0,0)
 #heightMap = numpy.load('fromZero.npy')
-#generateBitmask(heightMap,sample_datetime,9999)
 
 #for hour in xrange(24):
 #  now = datetime.datetime(2014,3,8,hour,0)
 #  generateBitmask(heightMap,now,9999)
 
-#shadowMap = numpy.load('shadowMapSignsReversed.npy')
 #bitmaskImage = array2image(shadowMap)
-#bitmaskImage.save('shadowMap_100by100_9999_Reversed.png')
+#bitmaskImage.save('shadowMap_Image.png')
