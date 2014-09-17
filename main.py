@@ -165,15 +165,14 @@ def RGB(value):
     print 'Warning, value > 1'
     return '1.f,0.f,0.f' # red
   elif value == 1:
-    return '1.f,0.f,0.f' # red 
+    return '0.f,0.f,0.f' # black 
   elif value < 0:
     print 'Warning, value < 0'
     return '0.f,0.f,1.f' #blue
 
   # blue, cyan, green, yellow, red with linear interpolation
   # Serious outlier problem here, causing almost all values to fall between the first 2 colours
-  #colours =[[0,0,1],[0,1,1],[0,1,0],[1,1,0],[1,0,0]]
-  colours =[[1,1,1],[1,0,0],[0,1,0],[1,1,0],[1,0,0]]
+  colours =[[0,0,1],[0,1,1],[0,1,0],[1,1,0],[1,0,0],[1,0,0],[1,0,0],[1,0,0],[1,0,0],[1,0,0]]
   N = len(colours)
   lower = math.floor(value*(N-1))
   f = value*(N-1) - lower
@@ -184,7 +183,7 @@ def RGB(value):
   return '%(red)sf,%(green)sf,%(blue)sf' % {'red':r,'green':g,'blue':b}
 
 def trianglePair(i,j,A,shades):
-  # Upper left corner of the bounding square is at coordinate (i,j)
+  # Upper left corner of the bounding square is at coordinate (i,j
   # height array m by n (called A)
   # shades array m by n by 2
   OpenGLString = ('glBegin(GL_TRIANGLES);',
@@ -279,15 +278,14 @@ def maskShadows(shadowMap, shaderMap):
   for i in xrange(1,98):
     for j in xrange(1,98):
       if shadowMap[i,j] == 0:
-        print 'set shadow at ', i, j
-        shaderMap[i-1,j-1,3,0] = 0
-        shaderMap[i-1,j-1,3,1] = 0
-        shaderMap[i  ,j-1,2,0] = 0
-        shaderMap[i  ,j-1,2,1] = 0
-        shaderMap[i-1,j  ,1,0] = 0
-        shaderMap[i-1,j  ,1,1] = 0
-        shaderMap[i  ,j  ,0,0] = 0
-        shaderMap[i  ,j  ,0,1] = 0
+        shaderMap[i-1,j-1,3,0] = 1
+        shaderMap[i-1,j-1,3,1] = 1
+        shaderMap[i  ,j-1,2,0] = 1
+        shaderMap[i  ,j-1,2,1] = 1
+        shaderMap[i-1,j  ,1,0] = 1
+        shaderMap[i-1,j  ,1,1] = 1
+        shaderMap[i  ,j  ,0,0] = 1
+        shaderMap[i  ,j  ,0,1] = 1
   return shaderMap
 
 def generateGL(A,shades):
@@ -302,8 +300,7 @@ def generateGL(A,shades):
 
 def generateGLUT(A,shades):
   # Camera movement, ground etc.
-  normalisedShades = normaliseArray(shades)
-  data = open('template.c', 'r').read() % {'triangulate':generateGL(A,normalisedShades)}
+  data = open('template.c', 'r').read() % {'triangulate':generateGL(A,shades)}
   outfile = open('current.c', 'w')
   outfile.write(data)
   outfile.close()
@@ -328,12 +325,13 @@ smoothedNormalVectorMap = numpy.load('smoothedNormalVectorArray.npy')
 #shaderArray(normalVectorMap,sunV)
 #shaderMap = numpy.load('hourAverageArray.npy')
 
-#smoothedShaderArray(smoothedNormalVectorMap,sunV)
+smoothedShaderArray(smoothedNormalVectorMap,sunV)
 smoothedShaderMap = numpy.load('smoothedScalarArray.npy')
 
-#shadowMap = numpy.load("shadowMap.npy")
+shadowMap = numpy.load("shadowMapSignsReversed.npy")
 
-#maskedShaderMap = maskShadows(shadowMap,smoothedShaderMap)
+normalisedShades = normaliseArray(smoothedShaderMap)
+maskedShaderMap = maskShadows(shadowMap,normalisedShades)
 
 #shaderMap = numpy.load('hourAverageArray.npy')
-generateGLUT(heightMap,smoothedShaderMap)
+generateGLUT(heightMap,maskedShaderMap)

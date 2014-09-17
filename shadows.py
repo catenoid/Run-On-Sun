@@ -29,9 +29,9 @@ def generateBitmask(buildingMap, datetime, NSamples):
 
   # Check which quadrant we're in
   if numpy.sin(az) > 0:
-    azDispl = numpy.array([ 1,-numpy.cos(az)/numpy.sin(az)])
-  elif numpy.sin(az) < 0:
     azDispl = numpy.array([-1, numpy.cos(az)/numpy.sin(az)])
+  elif numpy.sin(az) < 0:
+    azDispl = numpy.array([ 1,-numpy.cos(az)/numpy.sin(az)])
   elif numpy.cos(az) > 0:
     azDispl = numpy.array([ 0,-1])
   elif numpy.cos(az) < 0:
@@ -57,12 +57,12 @@ def generateBitmask(buildingMap, datetime, NSamples):
       if(0<=tupleinterpolated[0]<100 and 0<tupleinterpolated[1]<100): # Check shadow's in range
         if(shadowH > buildingMap[tupleinterpolated]):
           shadowMap[tupleinterpolated] = 0
-  arrayFile = open('shadowMap.npy', 'w')
+  arrayFile = open('shadowMapSignsReversed.npy', 'w')
   numpy.save(arrayFile,shadowMap)
 
 sample_datetime = datetime.datetime(2014,3,8,10,0)
 heightMap = numpy.load('fromZero.npy')
-#generateBitmask(heightMap,sample_datetime,9999)
-shadowMap = numpy.load('shadowMap.npy')
+generateBitmask(heightMap,sample_datetime,9999)
+shadowMap = numpy.load('shadowMapSignsReversed.npy')
 bitmaskImage = array2image(shadowMap)
-bitmaskImage.save('shadowMap_100by100_9999_2_samples.png')
+bitmaskImage.save('shadowMap_100by100_9999_Reversed.png')
